@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>RAPID Parser Test</title>
+</head>
+<body>
+    <textarea id="input" rows="10" cols="50"></textarea>
+    <br>
+    <button onclick="parseRapid()">Parse RAPID</button>
+    <br>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import init, { parse_rapid } from './pkg_web/rapid_wasm.js';
+
+        async function run() {
+            await init();
+            window.parseRapid = function() {
+                const input = document.getElementById('input').value;
+                try {
+                    const result = parse_rapid(input);
+                    document.getElementById('output').textContent = result;
+                } catch (error) {
+                    document.getElementById('output').textContent = error;
+                }
+            };
+        }
+
+        run();
+    </script>
+</body>
+</html>

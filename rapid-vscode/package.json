@@ -1,0 +1,65 @@
+{
+  "name": "rapid-vscode",
+  "displayName": "RAPID Language Support",
+  "description": "Language support for ABB RAPID",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:rapid"
+  ],
+  "publisher": "PeterEvers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pevers/rapid"
+  },
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "rapid",
+        "aliases": [
+          "RAPID",
+          "rapid"
+        ],
+        "extensions": [
+          ".mod",
+          ".prg"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rapid",
+        "scopeName": "source.rapid",
+        "path": "./syntaxes/rapid.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.37",
+    "@types/vscode": "^1.60.0",
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.24.0",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1"
+  }
+}

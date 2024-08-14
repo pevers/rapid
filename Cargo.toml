@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "rapid-parser",
+    "rapid-wasm"
+]

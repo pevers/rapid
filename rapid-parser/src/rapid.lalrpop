@@ -1,0 +1,505 @@
+use std::str::FromStr;
+use crate::ast::{
+    AccessMode, Expr, Dimension, Module, ModuleInfo, ModuleAttribute, RecordComponent, RecordDefinition, AliasDefinition,
+    TypeDefinition, Scope, DataDeclaration, VarDeclaration, VarDeclarationType, Definition, RoutineDeclaration, ProcDeclaration, TrapDeclaration, ParameterDeclaration, ErrorHandler, FuncDeclaration, ParameterDeclarationType, OptionalParameterDeclarationType, Statement, TestCase, AssignmentTarget, Variable, Parameter, Argument, Term, OpCode,
+    tokenize_string
+};
+
+grammar;
+
+pub Module: Module = {
+    "MODULE" <i:Identifier> <attrs:ModuleAttributeList?> 
+    <s:Statement*> "ENDMODULE" =>? {
+        Ok(Module::Module(ModuleInfo {
+            name: i, 
+            attributes: attrs.unwrap_or_else(Vec::new), 
+            statements: s
+        }))
+    }
+}
+
+TypeDefinition: TypeDefinition = {
+    <s:"LOCAL"?> <rd:RecordDefinition> => TypeDefinition::RecordDefinition(s.map(|_| Scope::LOCAL).unwrap_or(Scope::GLOBAL), rd),
+    <s:"LOCAL"?> <ad:AliasDefinition> => TypeDefinition::AliasDefinition(s.map(|_| Scope::LOCAL).unwrap_or(Scope::GLOBAL), ad),
+    "<TDN>" => TypeDefinition::TDN
+}
+
+DataDeclaration: DataDeclaration = {
+    <s:"LOCAL"?> <vd:VarDeclaration> => DataDeclaration::VarDeclaration(s.map(|_| Scope::LOCAL).unwrap_or(Scope::GLOBAL), vd),
+    "TASK" <vd:VarDeclaration> => DataDeclaration::VarDeclaration(Scope::TASK,vd),
+    "<DDN>" => DataDeclaration::DDN
+}
+
+
+Identifier: String = <r"[a-zA-Z_][a-zA-Z0-9_]*"> => <>.to_owned();
+
+StringLiteral: String = {
+    <l: @L> <s:r#"".*""#> <r: @L> =>? tokenize_string(l, s, r)
+}
+
+Num: f64 = {
+    r"-?(\d*\.\d+|\d+\.\d*)([eE][+-]?\d+)?" => f64::from_str(<>).unwrap(),
+    r"-?\d+[eE][+-]?\d+" => f64::from_str(<>).unwrap(),
+    r"-?\d+" => f64::from_str(<>).unwrap()
+};
+
+Bool: bool = {
+    "TRUE" => true,
+    "FALSE" => false
+};
+
+ModuleAttribute: ModuleAttribute = {
+    "SYSMODULE" => ModuleAttribute::SYSMODULE,
+    "NOSTEPIN" => ModuleAttribute::NOSTEPIN,
+    "VIEWONLY" => ModuleAttribute::VIEWONLY,
+    "READONLY" => ModuleAttribute::READONLY,
+    "NOVIEW" => ModuleAttribute::NOVIEW
+}
+
+ModuleAttributeList: Vec<ModuleAttribute> = {
+    "(" <attr:ModuleAttribute> <attrs:ModuleAttributeListRest*> ")" => {
+        let mut v = vec![attr];
+        v.extend(attrs);
+        v
+    }
+}
+
+ModuleAttributeListRest: ModuleAttribute = {
+    "," <attr:ModuleAttribute> => attr
+}
+
+RecordDefinition: RecordDefinition = {
+    "RECORD" <i:Identifier> <c:RecordComponent*> "ENDRECORD" => RecordDefinition { name: i, components: c }
+}
+
+RecordComponent: RecordComponent = {
+    <d:Identifier> <i:Identifier> ";" => RecordComponent { data_type: d, name: i }
+}
+
+AliasDefinition: AliasDefinition = {
+    "ALIAS" <d:Identifier> <i:Identifier> ";" => AliasDefinition { name: i, data_type: d }
+}
+
+Comment: String = {
+    r"\!.*\n" => <>.to_owned()
+}
+
+pub VarDeclaration: VarDeclaration = {
+    "VAR" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::VarDeclaration, data_type: d, definition: v },
+    "PERS" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::PersDeclaration, data_type: d, definition: v },
+    "CONST" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::ConstDeclaration, data_type: d, definition: v }
+}
+
+Definition: Definition = {
+    <i:Identifier> => Definition { identifier: i, expression: None, dim: None },
+    <i:Identifier> ":=" <e:Expr> => Definition { identifier: i, expression: Some(e), dim: None },
+    <i:Identifier> <d:Dim> => Definition { identifier: i, expression: None, dim: Some(d) },
+    <i:Identifier> <d:Dim> ":=" <e:Expr> => Definition { identifier: i, expression: Some(e), dim: Some(d) },
+}
+
+Dim: Dimension = {
+    "{" <d:Expr> <ds:DimLast?> "}" => {
+        let mut v = vec![d];
+        if let Some(ds) = ds {
+            v.push(ds);
+        }
+        Dimension::Dimension(v)
+    },
+    "{" "<DIM>" "}" => Dimension::DIM   
+}
+
+DimLast: Expr = {
+    "," <e:Expr> => e
+}
+
+pub Expr: Expr = {
+    LogicalExpr
+}
+
+LogicalExpr: Expr = {
+    <l:LogicalExpr> <o:LogicalOp> <r:AndExpr> => Expr::Op(Box::new(l), o, Box::new(r)),
+    <o:NotOp> <e:AndExpr> => Expr::UnaryOp(o, Box::new(e)),
+    AndExpr
+}
+
+AndExpr: Expr = {
+    <l:AndExpr> <o:AndOp> <r:CompExpr> => Expr::Op(Box::new(l), o, Box::new(r)),
+    CompExpr
+}
+
+CompExpr: Expr = {
+    <l:CompExpr> <o:CompOp> <r:AddExpr> => Expr::Op(Box::new(l), o, Box::new(r)),
+    AddExpr
+}
+
+AddExpr: Expr = {
+    <l:AddExpr> <o:AddOp> <r:Factor> => Expr::Op(Box::new(l), o, Box::new(r)),
+    Factor
+}
+
+Factor: Expr = {
+    <l:Factor> <o:FactorOp> <r:Term> => Expr::Op(Box::new(l), o, Box::new(r)),
+    Term,
+};
+
+Term: Expr = {
+    <s:StringLiteral> => Expr::Term(Term::String(s)),
+    <b:Bool> => Expr::Term(Term::Bool(b)),
+    <n:Num> => Expr::Term(Term::Num(n)),
+    <a:Array> => Expr::Term(Term::Array(a)),
+    <v:Variable> => Expr::Term(Term::Var(v)),
+    <fc:FuncCall> => fc,
+    "(" <e:Expr> ")" => e,
+    "<EXP>" => Expr::EXP
+};
+
+LogicalOp: OpCode = {
+    "OR" => OpCode::Or,
+    "XOR" => OpCode::Xor,
+}
+
+NotOp: OpCode = {
+    "NOT" => OpCode::Not,
+}
+
+AndOp: OpCode = {
+    "AND" => OpCode::And,
+}
+
+CompOp: OpCode = {
+    "<" => OpCode::Lt,
+    "<=" => OpCode::Lte,
+    "=" => OpCode::Eq,
+    ">" => OpCode::Gt,
+    ">=" => OpCode::Gte,
+    "<>" => OpCode::Ne,
+};
+
+AddOp: OpCode = {
+    "+" => OpCode::Add,
+    "-" => OpCode::Sub,
+};
+
+FactorOp: OpCode = {
+    "*" => OpCode::Mul,
+    "/" => OpCode::Div,
+    "DIV" => OpCode::DivInt,
+    "MOD" => OpCode::Mod,
+};
+
+FuncCall: Expr = {
+    <i:Identifier> "(" <args:ArgumentList?> ")" => Expr::FuncCall(i, args.unwrap_or_else(Vec::new))
+}
+
+Array: Vec<Expr> = {
+    "[" <elems:ArrayElements?> "]" => elems.unwrap_or_else(Vec::new)
+}
+
+ArrayElements: Vec<Expr> = {
+    <e:Expr> <es:ArrayElementsRest*> => {
+        let mut v = vec![e];
+        v.extend(es);
+        v
+    }
+}
+
+ArrayElementsRest: Expr = {
+    "," <e:Expr> => e
+}
+
+pub RoutineDeclaration: RoutineDeclaration = {
+    <s:"LOCAL"?> <pd:ProcDeclaration> => RoutineDeclaration::ProcDeclaration(pd),
+    <f:FuncDeclaration> => RoutineDeclaration::FuncDeclaration(f),
+    <t:TrapDeclaration> => RoutineDeclaration::TrapDeclaration(t),
+    "<RDN>" => RoutineDeclaration::RDN
+}
+
+ProcDeclaration: ProcDeclaration = {
+    "PROC" <i:Identifier> "(" <pl:ParameterDeclarationList?> ")" <s:Statement*> <b:BackwardHandler?> <e:ErrorHandler?> <u:UndoHandler?> "ENDPROC" => {
+        ProcDeclaration { 
+            name: i, 
+            parameters: pl.unwrap_or_else(Vec::new), 
+            statements: s,
+            backward_handler: b, 
+            error_handler: e, 
+            undo_handler: u 
+        }
+    }
+}
+
+TrapDeclaration: TrapDeclaration = {
+    "TRAP" <i:Identifier> <s:Statement*> <e:ErrorHandler?> <u:UndoHandler?> "ENDTRAP" => {
+        TrapDeclaration {
+            name: i,
+            statements: s,
+            error_handler: e,
+            undo_handler: u
+        }
+    }
+}
+
+FuncDeclaration: FuncDeclaration = {
+    "FUNC" <dt:Identifier> <i:Identifier> "(" <pl:ParameterDeclarationList?> ")" <s:Statement*> <e:ErrorHandler?> <u:UndoHandler?> "ENDFUNC" => {
+        FuncDeclaration {
+            data_type: dt,
+            name: i,
+            parameters: pl.unwrap_or_else(Vec::new), 
+            statements: s,
+            error_handler: e, 
+            undo_handler: u 
+        }
+    }
+}
+
+ParameterDeclarationList: Vec<ParameterDeclarationType> = {
+    <p:ParameterDeclarationItem> <ps:ParameterListRest*> => {
+        let mut v = vec![p];
+        v.extend(ps);
+        v
+    }
+}
+
+ParameterListRest: ParameterDeclarationType = {
+    "," <p:ParameterDeclarationItem> => p
+}
+
+ParameterDeclarationItem: ParameterDeclarationType = {
+    <p:ParameterDeclaration> => ParameterDeclarationType::ParameterDeclaration(p),
+    "\\" <op:OptionalParameterDeclarationList> => ParameterDeclarationType::OptionalParameterDeclaration(op),
+    "<PAR>" => ParameterDeclarationType::PAR,
+}
+
+ParameterDeclaration: ParameterDeclaration = {
+    <pam:ParameterDeclarationAccessMode?> <dt:Identifier> <n:Identifier> <d:Dim?> => 
+        ParameterDeclaration {
+            access_mode: pam.unwrap_or(AccessMode::IN), 
+            data_type: dt, 
+            name: n,
+            dim: d,
+        }
+}
+
+OptionalParameterDeclarationList: Vec<OptionalParameterDeclarationType> = {
+    <opd:OptionalParameterDeclaration> <opdr:OptionalParameterDeclarationRest*> => {
+        let mut v = vec![opd];
+        v.extend(opdr);
+        v
+    }
+}
+
+OptionalParameterDeclaration: OptionalParameterDeclarationType = {
+    <opd:ParameterDeclaration> => OptionalParameterDeclarationType::OptionalParameterDeclaration(opd),
+    "switch" <i:Identifier> => OptionalParameterDeclarationType::Switch(i),
+    "<ALT>" => OptionalParameterDeclarationType::ALT
+}
+
+OptionalParameterDeclarationRest: OptionalParameterDeclarationType = {
+    "|" <opr:OptionalParameterDeclaration> => opr,
+}
+
+ParameterDeclarationAccessMode: AccessMode = {
+    "VAR" => AccessMode::VAR,
+    "PERS" => AccessMode::PERS,
+    "INOUT" => AccessMode::INOUT,
+}
+
+pub Statement: Statement = {
+    <td:TypeDefinition> => Statement::TypeDefinition(td),
+    <dd:DataDeclaration> => Statement::DataDeclaration(dd),
+    <rd:RoutineDeclaration> => Statement::RoutineDeclaration(rd),
+    <l:LabelStatement> => l,
+    <a:AssignmentStatement> => a,
+    <pc:ProcCall> => pc,
+    <g:GotoStatement> => g,
+    <r:ReturnStatement> => r,
+    <r:RaiseStatement> => r,
+    <e:ExitStatement> => e,
+    <r:RetryStatement> => r,
+    <t:TryNextStatement> => t,
+    <c:ConnectStatement> => c,
+    <i:IfStatement> => i,
+    <f:ForStatement> => f,
+    <w:WhileStatement> => w,
+    <te:TestStatement> => te,
+    <cmt:Comment> => Statement::Comment(cmt),
+    "<STM>" ";" => Statement::SMT
+}
+
+LabelStatement: Statement = {
+    <i:Identifier> ":" => Statement::Label(i)
+}
+
+AssignmentStatement: Statement = {
+    <t:AssignmentTarget> ":=" <e:Expr> ";" => Statement::Assignment(t, e)
+}
+
+AssignmentTarget: AssignmentTarget = {
+    <v:Variable> => AssignmentTarget::Variable(v),
+    "<VAR>" => AssignmentTarget::VAR
+}
+
+Variable: Variable = {
+    <i:Identifier> => Variable::Variable(i),
+    <i:Identifier> <d:Dim> => Variable::VariableElement(i, d),
+    <v:Variable> "." <e:Identifier> => Variable::VariableComponent(Box::new(v), e)
+}
+
+Parameter: Parameter = {
+    <i:Identifier> => Parameter::Parameter(i),
+    <i:Identifier> <d:Dim> => Parameter::ParameterElement(i, d),
+    <v:Parameter> "." <e:Identifier> => Parameter::ParameterComponent(Box::new(v), e)
+}
+
+ProcCall: Statement = {
+    <i:Identifier> <args:ArgumentList?> ";" => Statement::ProcCall(Expr::Term(Term::String(i)), args.unwrap_or_else(Vec::new)),
+    "%" <e:Expr> "%" <args:ArgumentList?> ";" => Statement::ProcCall(e, args.unwrap_or_else(Vec::new))
+}
+
+ArgumentList: Vec<Argument> = {
+    <a:Argument> <args:ArgumentListRest*> => {
+        let mut v = if let Some(a) = a { vec![a] } else { vec![] };
+        for a in args {
+            if let Some(a) = a {
+                v.push(a);
+            }
+        }
+        v
+    }
+}
+
+Argument: Option<Argument> = {
+    "<ARG>" => None,
+    <r:RequiredArgument> => Some(Argument::Required(r.0, r.1)),
+    <o:OptionalArgument> => Some(Argument::Optional(o.0, o.1)),
+    <c:ConditionalArgument> => Some(Argument::Conditional(c.0, c.1, c.2)),
+}
+
+RequiredArgument: (Option<String>, Expr) = {
+    <i:ArgumentIdentifier?> <e:Expr> => (i, e)
+}
+
+OptionalArgument: (String, Option<Expr>) = {
+    "\\" <i:Identifier> <e:ArgumentOptionalExpression?> => (i, e)
+}
+
+ConditionalArgument: (String, Parameter, Parameter) = {
+    "\\" <i:Identifier> "?" <pl:Parameter> "," <pr:Parameter> => (i, pl, pr)
+}
+
+ArgumentIdentifier: String = {
+    <i:Identifier> ":=" => i
+}
+
+ArgumentOptionalExpression: Expr = {
+    ":=" <e:Expr> => e
+}
+
+ArgumentListRest: Option<Argument> = {
+    "," <a:Argument> => a,
+    <o:OptionalArgument> => Some(Argument::Optional(o.0, o.1)),
+    <c:ConditionalArgument> => Some(Argument::Conditional(c.0, c.1, c.2))
+}
+
+GotoStatement: Statement = {
+    "GOTO" <i:Identifier> ";" => Statement::Goto(i)
+}
+
+ReturnStatement: Statement = {
+    "RETURN" <e:Expr?> ";" => Statement::Return(e)
+}
+
+RaiseStatement: Statement = {
+    "RAISE" <e:Expr?> ";" => Statement::Raise(e)
+}
+
+ExitStatement: Statement = {
+    "EXIT" ";" => Statement::Exit
+}
+
+RetryStatement: Statement = {
+    "RETRY" ";" => Statement::Retry
+}
+
+TryNextStatement: Statement = {
+    "TRYNEXT" ";" => Statement::TryNext
+}
+
+ConnectStatement: Statement = {
+    "CONNECT" <ct:Identifier> "WITH" <t:Identifier> ";" => Statement::Connect(ct, t)
+}
+
+IfStatement: Statement = {
+    "IF" <ce:Expr> "THEN" <stms:Statement*> <ei:ElseIfStatement*> <e:ElseStatement?> "ENDIF" => Statement::If(ce, stms, ei, e.unwrap_or_else(Vec::new)),
+    "IF" <ce:Expr> <stm:Statement> => Statement::If(ce, vec![stm], Vec::new(), Vec::new())
+}
+
+ElseIfStatement: (Expr, Vec<Statement>) = {
+    "ELSEIF" <ce:Expr> "THEN" <stms:Statement*> => (ce, stms),
+    "ELSEIF" <ce:Expr> "THEN" "<EIT>" => (ce, Vec::new())
+}
+
+ElseStatement: Vec<Statement> = {
+    "ELSE" <stms:Statement*> => stms
+}
+
+ForStatement: Statement = {
+    "FOR" <i:Identifier> "FROM" <fe:Expr> "TO" <te:Expr> <step:ForStep?> "DO" <stms:Statement*> "ENDFOR" => Statement::For(i, fe, te, step, stms)
+}
+
+ForStep: Expr = {
+    "STEP" <e:Expr> => e
+}
+
+WhileStatement: Statement = {
+    "WHILE" <e:Expr> "DO" <stms:Statement*> "ENDWHILE" => Statement::While(e, stms)
+}
+
+TestStatement: Statement = {
+    "TEST" <e:Expr> <c:TestStatementCases*> <d:TestStatementDefault?> "ENDTEST" => Statement::Test(e, c, d)
+}
+
+TestStatementCases: TestCase = {
+    "CASE" <e:Expr> <er:TestStatementCaseRest*> ":" <stms:Statement*> => {
+        let mut expressions = vec![e];
+        expressions.extend(er);
+        TestCase::Case(expressions, stms)
+    },
+    "<CSE>" => TestCase::CSE
+}
+
+TestStatementCaseRest: Expr = {
+    "," <e:Expr> => e
+}
+
+TestStatementDefault: Vec<Statement> = {
+    "DEFAULT" ":" <stms:Statement*> => stms
+}
+
+BackwardHandler: Vec<Statement> = {
+    "BACKWARD" <stms:Statement*> => stms
+}
+
+ErrorHandler: ErrorHandler = {
+    "ERROR" <nums:ErrorNumbers?> <stms:Statement*> => ErrorHandler { numbers: nums.unwrap_or_else(Vec::new), statements: stms }
+}
+
+ErrorNumbers: Vec<Expr> = {
+    "(" <e:ErrorNumber> <er:ErrorNumberRest*> ")" => {
+        let mut v = vec![e];
+        v.extend(er);
+        v
+    }
+}
+
+ErrorNumber: Expr = {
+    <n:Num> => Expr::Term(Term::Num(n)),
+    <i:Identifier> => Expr::Term(Term::String(i)),
+}
+
+ErrorNumberRest: Expr = {
+    "," <e:ErrorNumber> => e
+}
+
+UndoHandler: Vec<Statement> = {
+    "UNDO" <stms:Statement*> => stms
+}

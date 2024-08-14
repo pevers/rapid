@@ -1,0 +1,38 @@
+{
+    "name": "RAPID",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#comments"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [{
+                "name": "keyword.control.rapid",
+                "match": "\\b(IF|THEN|ELSE|ELSEIF|ENDIF|FOR|ENDFOR|WHILE|ENDWHILE|PROC|ENDPROC|FUNC|ENDFUNC|RETURN|MODULE|ENDMODULE|VAR|CONST|PERS)\\b"
+            }]
+        },
+        "strings": {
+            "name": "string.quoted.double.rapid",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.rapid",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "comments": {
+            "name": "comment.line.exclamation.rapid",
+            "match": "!.*$"
+        }
+    },
+    "scopeName": "source.rapid"
+}
