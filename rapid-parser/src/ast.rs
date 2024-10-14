@@ -104,7 +104,7 @@ where
 pub fn validate_module_attributes<'input>(
     attrs: &Vec<ModuleAttribute>,
 ) -> Result<(), lalrpop_util::ParseError<usize, lalrpop_util::lexer::Token<'input>, &'static str>> {
-    if !is_sorted(&attrs) {
+    if !is_sorted(attrs) {
         return Err(lalrpop_util::ParseError::User {
             error: "Module attributes are not in the correct order",
         });

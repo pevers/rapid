@@ -1,8 +1,9 @@
 {
   "name": "rapid-vscode",
-  "displayName": "RAPID Language Support",
+  "displayName": "ABB RAPID Language Support",
   "description": "Language support for ABB RAPID",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.60.0"
   },

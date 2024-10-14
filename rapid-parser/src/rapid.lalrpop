@@ -358,10 +358,8 @@ ProcCall: Statement = {
 ArgumentList: Vec<Argument> = {
     <a:Argument> <args:ArgumentListRest*> => {
         let mut v = if let Some(a) = a { vec![a] } else { vec![] };
-        for a in args {
-            if let Some(a) = a {
-                v.push(a);
-            }
+        for a in args.into_iter().flatten() {
+            v.push(a);
         }
         v
     }
