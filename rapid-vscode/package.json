@@ -2,7 +2,7 @@
   "name": "rapid-vscode",
   "displayName": "ABB RAPID Language Support",
   "description": "Language support for ABB RAPID",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "icon": "images/logo_small_white_b.png",
   "engines": {
     "vscode": "^1.60.0"
