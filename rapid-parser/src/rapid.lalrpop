@@ -1,7 +1,6 @@
 use std::str::FromStr;
 use crate::ast::{
-    AccessMode, Expr, Dimension, Module, ModuleInfo, ModuleAttribute, RecordComponent, RecordDefinition, AliasDefinition,
-    TypeDefinition, Scope, DataDeclaration, VarDeclaration, VarDeclarationType, Definition, RoutineDeclaration, ProcDeclaration, TrapDeclaration, ParameterDeclaration, ErrorHandler, FuncDeclaration, ParameterDeclarationType, OptionalParameterDeclarationType, Statement, TestCase, AssignmentTarget, Variable, Parameter, Argument, Term, OpCode,
+    AccessMode, Expr, Dimension, Module, ModuleInfo, ModuleAttribute, RecordComponent, RecordDefinition, AliasDefinition, TypeDefinition, Scope, DataDeclaration, VarDeclaration, VarDeclarationType, Definition, RoutineDeclaration, ProcDeclaration, TrapDeclaration, ParameterDeclaration, ErrorHandler, FuncDeclaration, ParameterDeclarationType, OptionalParameterDeclarationType, Statement, TestCase, AssignmentTarget, Variable, Parameter, Argument, Term, OpCode,
     tokenize_string
 };
 
@@ -38,9 +37,9 @@ StringLiteral: String = {
 }
 
 Num: f64 = {
-    r"-?(\d*\.\d+|\d+\.\d*)([eE][+-]?\d+)?" => f64::from_str(<>).unwrap(),
-    r"-?\d+[eE][+-]?\d+" => f64::from_str(<>).unwrap(),
-    r"-?\d+" => f64::from_str(<>).unwrap()
+    r"(\d*\.\d+|\d+\.\d*)([eE][+-]?\d+)?" => f64::from_str(<>).unwrap(),
+    r"\d+[eE][+-]?\d+" => f64::from_str(<>).unwrap(),
+    r"\d+" => f64::from_str(<>).unwrap()
 };
 
 Bool: bool = {
@@ -87,7 +86,7 @@ Comment: String = {
 pub VarDeclaration: VarDeclaration = {
     "VAR" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::VarDeclaration, data_type: d, definition: v },
     "PERS" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::PersDeclaration, data_type: d, definition: v },
-    "CONST" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::ConstDeclaration, data_type: d, definition: v }
+    "CONST" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::ConstDeclaration, data_type: d, definition: v },
 }
 
 Definition: Definition = {
@@ -119,6 +118,7 @@ pub Expr: Expr = {
 LogicalExpr: Expr = {
     <l:LogicalExpr> <o:LogicalOp> <r:AndExpr> => Expr::Op(Box::new(l), o, Box::new(r)),
     <o:NotOp> <e:AndExpr> => Expr::UnaryOp(o, Box::new(e)),
+    <o:AddOp> <e:AndExpr> => Expr::UnaryOp(o, Box::new(e)),
     AndExpr
 }
 
@@ -458,6 +458,11 @@ TestStatement: Statement = {
 
 TestStatementCases: TestCase = {
     "CASE" <e:Expr> <er:TestStatementCaseRest*> ":" <stms:Statement*> => {
+        let mut expressions = vec![e];
+        expressions.extend(er);
+        TestCase::Case(expressions, stms)
+    },
+    "case" <e:Expr> <er:TestStatementCaseRest*> ":" <stms:Statement*> => {
         let mut expressions = vec![e];
         expressions.extend(er);
         TestCase::Case(expressions, stms)

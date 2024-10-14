@@ -52,8 +52,11 @@ ENDMODULE"#;
         let input = r#"
             MODULE test
                 VAR num someVar;
+                var num someLowerCaseVar;
                 PERS num somePers;
+                pers num someLowerCasePers;
                 CONST num someConst;
+                const num someLowerCaseConst;
             ENDMODULE"#;
         parse_module(input).unwrap();
     }
@@ -459,6 +462,7 @@ ENDMODULE"#;
             ENDFOR
         "#;
         let result = rapid::StatementParser::new().parse(input);
+        println!("{:?}", result);
         assert!(result.is_ok());
     }
 
@@ -677,11 +681,28 @@ ENDMODULE"#;
     }
 
     #[test]
+    fn parse_chained_expressions() {
+        let inputs = vec![
+            "a - b",
+            "a - b - c",
+            "newInd - ind - 1",
+            "newInd-ind-1",
+            "10e+10",
+            "10E-10",
+            "-10",
+        ];
+
+        for input in inputs {
+            let result = rapid::ExprParser::new().parse(input);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
     fn parse_complex_file_logger() {
         // Source from: https://raw.githubusercontent.com/robotics/open_abb/fuerte-devel/RAPID/LOGGER.mod
         let source = std::fs::read_to_string("data/LOGGER.mod").unwrap();
         let result = parse_module(&source);
-        println!("{:?}", result);
         assert!(result.is_ok());
     }
 
