@@ -7,4 +7,4 @@ A VSCode extension for ABB RAPID.
 - Syntax highlighting
 - Linting
 
-![RAPID Language Support Screenshot](images/screenshot.png)
+![RAPID Language Support Screenshot](https://github.com/pevers/rapid/raw/main/rapid-vscode/images/screenshot.png)
