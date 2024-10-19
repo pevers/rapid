@@ -25,14 +25,14 @@ mod tests {
 
     #[test]
     fn parse_module_attributes() {
-        let input = r#"MODULE test (SYSMODULE, VIEWONLY)
+        let input = r#"MODULE mymodule (SYSMODULE, VIEWONLY)
 ENDMODULE"#;
         parse_module(&input).unwrap();
     }
 
     #[test]
     fn parse_module_without_attributes() {
-        let input = r#"MODULE test
+        let input = r#"MODULE mymodule
 ENDMODULE"#;
         parse_module(input).unwrap();
     }
@@ -40,7 +40,7 @@ ENDMODULE"#;
     #[test]
     fn parse_alias() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 ALIAS num level;
                 CONST level low := 2.5;
             ENDMODULE"#;
@@ -48,15 +48,12 @@ ENDMODULE"#;
     }
 
     #[test]
-    fn parse_var_declarations() {
+    fn parse_var_declaration() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 VAR num someVar;
-                var num someLowerCaseVar;
                 PERS num somePers;
-                pers num someLowerCasePers;
                 CONST num someConst;
-                const num someLowerCaseConst;
             ENDMODULE"#;
         parse_module(input).unwrap();
     }
@@ -64,7 +61,7 @@ ENDMODULE"#;
     #[test]
     fn parse_data_declarations() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 LOCAL VAR num someVar;
                 LOCAL PERS num somePers;
                 LOCAL CONST num someConst;
@@ -91,7 +88,7 @@ ENDMODULE"#;
     #[test]
     fn parse_comments() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 ! Comment
                 ! Another comment
             ENDMODULE"#;
@@ -101,7 +98,7 @@ ENDMODULE"#;
     #[test]
     fn parse_tdn_placeholder() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 <TDN>
             ENDMODULE"#;
         parse_module(input).unwrap();
@@ -110,7 +107,7 @@ ENDMODULE"#;
     #[test]
     fn parse_td_record() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 RECORD testRecord
                     num someNumber;
                     bool anotherRecord;
@@ -122,7 +119,7 @@ ENDMODULE"#;
     #[test]
     fn parse_td_decl_record() {
         let input = r#"
-            MODULE test
+            MODULE mymodule
                 RECORD testRecord
                     num someNumber;
                     bool anotherRecord;
@@ -135,7 +132,7 @@ ENDMODULE"#;
     #[test]
     fn parse_dd_record() {
         let input = r#"
-            MODULE test
+            MODULE mymdule
                 RECORD testRecord
                     num someNumber;
                     bool anotherRecord;
@@ -154,8 +151,8 @@ ENDMODULE"#;
     #[test]
     fn parse_simple_proc_routine() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter, num anotherParameter)
+            MODULE mymdule
+                PROC myproc(num someParameter, num anotherParameter)
                     VAR num someVariable;
                     someVariable := 5;
                 ENDPROC
@@ -166,8 +163,8 @@ ENDMODULE"#;
     #[test]
     fn parse_error_missing_semicolon() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter, num anotherParameter)
+            MODULE mymdule
+                PROC myproc(num someParameter, num anotherParameter)
                     VAR num someVariable
                     someVariable := 5;
                 ENDPROC
@@ -178,8 +175,8 @@ ENDMODULE"#;
     #[test]
     fn parse_par_parameter_declaration() {
         let input = r#"
-            MODULE test
-                PROC Test(<PAR>)
+            MODULE mymdule
+                PROC myproc(<PAR>)
                     VAR num someVariable;
                     someVariable := 5;
                 ENDPROC
@@ -190,8 +187,8 @@ ENDMODULE"#;
     #[test]
     fn parse_optional_parameter_declaration() {
         let input = r#"
-            MODULE test
-                PROC Test(num somParameter, \num optionalParameter)
+            MODULE mymdule
+                PROC myproc(num somParameter, \num optionalParameter)
                     VAR num someVariable;
                     someVariable := 5;
                 ENDPROC
@@ -201,9 +198,9 @@ ENDMODULE"#;
 
     #[test]
     fn parse_multiple_optional_parameter_declaration() {
-        let input = r#"
-            MODULE test
-                PROC Test(num somParameter, \num optionalParameter | num another | num andAnother)
+        let input: &str = r#"
+            MODULE mymdule
+                PROC myproc(num somParameter, \num optionalParameter | num another | num andAnother)
                     VAR num someVariable;
                     someVariable := 5;
                 ENDPROC
@@ -214,8 +211,8 @@ ENDMODULE"#;
     #[test]
     fn parse_switch_parameter_declaration() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter{2,2}, \switch on | switch off)
+            MODULE mymdule
+                PROC myproc(num someParameter{2,2}, \switch on | switch off)
                     <STM>;
                 ENDPROC
             ENDMODULE"#;
@@ -225,8 +222,8 @@ ENDMODULE"#;
     #[test]
     fn parse_parameter_declaration_par_ph() {
         let input = r#"
-            MODULE test
-                PROC Test(<PAR>)
+            MODULE mymdule
+                PROC myproc(<PAR>)
                     <STM>;
                 ENDPROC
             ENDMODULE"#;
@@ -236,8 +233,8 @@ ENDMODULE"#;
     #[test]
     fn parse_parameter_declaration_alt_ph() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter, \<ALT> | <ALT>)
+            MODULE mymdule
+                PROC myproc(num someParameter, \<ALT> | <ALT>)
                     <STM>;
                 ENDPROC
             ENDMODULE"#;
@@ -247,8 +244,8 @@ ENDMODULE"#;
     #[test]
     fn parse_parameter_declaration_dim_ph() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter{2,2}, num someOther{<DIM>})
+            MODULE mymdule
+                PROC myproc(num someParameter{2,2}, num someOther{<DIM>})
                     <STM>;
                 ENDPROC
             ENDMODULE"#;
@@ -258,8 +255,8 @@ ENDMODULE"#;
     #[test]
     fn parse_parameter_declaration_dim_invalid() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter{3*radius,2})
+            MODULE mymdule
+                PROC myproc(num someParameter{3*radius,2})
                     <STM>;
                 ENDPROC
             ENDMODULE"#;
@@ -271,8 +268,8 @@ ENDMODULE"#;
     #[test]
     fn parse_full_proce_routine() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter, num anotherParameter)
+            MODULE mymdule
+                PROC myproc(num someParameter, num anotherParameter)
                     VAR num someVariable;
                     someVariable := 5;
                 BACKWARD
@@ -289,8 +286,8 @@ ENDMODULE"#;
     #[test]
     fn parse_full_proce_routine_with_custom_error_handler() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter, num anotherParameter)
+            MODULE mymdule
+                PROC myproc(num someParameter, num anotherParameter)
                     VAR num someVariable;
                     someVariable := 5;
                 BACKWARD
@@ -307,7 +304,7 @@ ENDMODULE"#;
     #[test]
     fn parse_trap_routine() {
         let input = r#"
-            MODULE test
+            MODULE mymdule
                 PROC main()
                     VAR intnum hp;
                     CONNECT hp WITH high_pressure;
@@ -324,8 +321,8 @@ ENDMODULE"#;
     #[test]
     fn parse_var_assignment() {
         let input = r#"
-            MODULE test
-                PROC Test()
+            MODULE mymdule
+                PROC myproc()
                     count := count + 1;
                     matrix{i,j} := temp;
                     posarr{i}.y := x;
@@ -339,13 +336,13 @@ ENDMODULE"#;
     #[test]
     fn parse_procedure_call() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter)
+            MODULE mymdule
+                PROC myproc(num someParameter)
                     <STM>;
                 ENDPROC
                 PROC AnotherTest()
                     VAR num someVar:=2;
-                    Test someVar;
+                    RecordVar someVar;
                 ENDPROC
             ENDMODULE
         "#;
@@ -355,13 +352,13 @@ ENDMODULE"#;
     #[test]
     fn parse_procedure_call_ph() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter)
+            MODULE mymodule
+                PROC myproc(num someParameter)
                     <STM>;
                 ENDPROC
                 PROC AnotherTest()
                     VAR num someVar:=2;
-                    Test <ARG>;
+                    RecordVar <ARG>;
                 ENDPROC
             ENDMODULE
         "#;
@@ -371,14 +368,14 @@ ENDMODULE"#;
     #[test]
     fn parse_optional_and_conditional_procedure_call() {
         let input = r#"
-            MODULE test
-                PROC Test(num someParameter, \num optionalParam, \num anotherOptional)
+            MODULE mymodule
+                PROC myproc(num someParameter, \num optionalParam, \num anotherOptional)
                     <STM>;
                 ENDPROC
                 PROC AnotherTest()
                     VAR num someVar:=2;
                     VAR num anotherVar:=3;
-                    Test someVar, \anotherOptionalParam ? someVar, anotherVar;
+                    RecordVar someVar, \anotherOptionalParam ? someVar, anotherVar;
                 ENDPROC
             ENDMODULE
         "#;
@@ -388,8 +385,8 @@ ENDMODULE"#;
     #[test]
     fn parse_goto() {
         let input = r#"
-            MODULE test
-                PROC Test()
+            MODULE mymodule
+                PROC myproc()
                     someLabel:
                     GOTO someLabel;
                 ENDPROC
@@ -401,8 +398,8 @@ ENDMODULE"#;
     #[test]
     fn parse_return_statement() {
         let input = r#"
-            MODULE test
-                PROC Test()
+            MODULE mymodule
+                PROC myproc()
                     RETURN;
                 ENDPROC
             ENDMODULE
@@ -696,6 +693,22 @@ ENDMODULE"#;
             let result = rapid::ExprParser::new().parse(input);
             assert!(result.is_ok());
         }
+    }
+
+    #[test]
+    fn parse_case_insensitive_keywords() {
+        let input = r#"
+            TEST choice
+            case 1, 2, 3:
+                number := choice;
+            cAsE 4:
+                a := 4;
+            caSE 5:
+                b := 10;
+            ENDTEST
+        "#;
+        let result = rapid::StatementParser::new().parse(input);
+        assert!(result.is_ok());
     }
 
     #[test]

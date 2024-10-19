@@ -6,14 +6,18 @@ use crate::ast::{
 
 grammar;
 
+pub ID: String = {
+    r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_owned()
+};
+
 pub Module: Module = {
-    "MODULE" <i:Identifier> <attrs:ModuleAttributeList?> 
-    <s:Statement*> "ENDMODULE" =>? {
-        Ok(Module::Module(ModuleInfo {
-            name: i, 
+    "MODULE" <i:ID> <attrs:ModuleAttributeList?> 
+    <s:Statement*> "ENDMODULE" => {
+        Module::Module(ModuleInfo {
+            name: i.to_owned(), 
             attributes: attrs.unwrap_or_else(Vec::new), 
             statements: s
-        }))
+        })
     }
 }
 
@@ -28,9 +32,6 @@ DataDeclaration: DataDeclaration = {
     "TASK" <vd:VarDeclaration> => DataDeclaration::VarDeclaration(Scope::TASK,vd),
     "<DDN>" => DataDeclaration::DDN
 }
-
-
-Identifier: String = <r"[a-zA-Z_][a-zA-Z0-9_]*"> => <>.to_owned();
 
 StringLiteral: String = {
     <l: @L> <s:r#"".*""#> <r: @L> =>? tokenize_string(l, s, r)
@@ -68,15 +69,15 @@ ModuleAttributeListRest: ModuleAttribute = {
 }
 
 RecordDefinition: RecordDefinition = {
-    "RECORD" <i:Identifier> <c:RecordComponent*> "ENDRECORD" => RecordDefinition { name: i, components: c }
+    "RECORD" <i:ID> <c:RecordComponent*> "ENDRECORD" => RecordDefinition { name: i.to_owned(), components: c }
 }
 
 RecordComponent: RecordComponent = {
-    <d:Identifier> <i:Identifier> ";" => RecordComponent { data_type: d, name: i }
+    <d:ID> <i:ID> ";" => RecordComponent { data_type: d.to_owned(), name: i.to_owned() }
 }
 
 AliasDefinition: AliasDefinition = {
-    "ALIAS" <d:Identifier> <i:Identifier> ";" => AliasDefinition { name: i, data_type: d }
+    "ALIAS" <d:ID> <i:ID> ";" => AliasDefinition { name: i.to_owned(), data_type: d.to_owned() }
 }
 
 Comment: String = {
@@ -84,16 +85,16 @@ Comment: String = {
 }
 
 pub VarDeclaration: VarDeclaration = {
-    "VAR" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::VarDeclaration, data_type: d, definition: v },
-    "PERS" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::PersDeclaration, data_type: d, definition: v },
-    "CONST" <d:Identifier> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::ConstDeclaration, data_type: d, definition: v },
+    "VAR" <d:ID> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::VarDeclaration, data_type: d.to_owned(), definition: v },
+    "PERS" <d:ID> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::PersDeclaration, data_type: d.to_owned(), definition: v },
+    "CONST" <d:ID> <v:Definition> ";" => VarDeclaration { declaration_type: VarDeclarationType::ConstDeclaration, data_type: d.to_owned(), definition: v },
 }
 
 Definition: Definition = {
-    <i:Identifier> => Definition { identifier: i, expression: None, dim: None },
-    <i:Identifier> ":=" <e:Expr> => Definition { identifier: i, expression: Some(e), dim: None },
-    <i:Identifier> <d:Dim> => Definition { identifier: i, expression: None, dim: Some(d) },
-    <i:Identifier> <d:Dim> ":=" <e:Expr> => Definition { identifier: i, expression: Some(e), dim: Some(d) },
+    <i:ID> => Definition { identifier: i.to_owned(), expression: None, dim: None },
+    <i:ID> ":=" <e:Expr> => Definition { identifier: i.to_owned(), expression: Some(e), dim: None },
+    <i:ID> <d:Dim> => Definition { identifier: i.to_owned(), expression: None, dim: Some(d) },
+    <i:ID> <d:Dim> ":=" <e:Expr> => Definition { identifier: i.to_owned(), expression: Some(e), dim: Some(d) },
 }
 
 Dim: Dimension = {
@@ -188,7 +189,7 @@ FactorOp: OpCode = {
 };
 
 FuncCall: Expr = {
-    <i:Identifier> "(" <args:ArgumentList?> ")" => Expr::FuncCall(i, args.unwrap_or_else(Vec::new))
+    <i:ID> "(" <args:ArgumentList?> ")" => Expr::FuncCall(i.to_owned(), args.unwrap_or_else(Vec::new))
 }
 
 Array: Vec<Expr> = {
@@ -215,9 +216,9 @@ pub RoutineDeclaration: RoutineDeclaration = {
 }
 
 ProcDeclaration: ProcDeclaration = {
-    "PROC" <i:Identifier> "(" <pl:ParameterDeclarationList?> ")" <s:Statement*> <b:BackwardHandler?> <e:ErrorHandler?> <u:UndoHandler?> "ENDPROC" => {
+    "PROC" <i:ID> "(" <pl:ParameterDeclarationList?> ")" <s:Statement*> <b:BackwardHandler?> <e:ErrorHandler?> <u:UndoHandler?> "ENDPROC" => {
         ProcDeclaration { 
-            name: i, 
+            name: i.to_owned(), 
             parameters: pl.unwrap_or_else(Vec::new), 
             statements: s,
             backward_handler: b, 
@@ -228,9 +229,9 @@ ProcDeclaration: ProcDeclaration = {
 }
 
 TrapDeclaration: TrapDeclaration = {
-    "TRAP" <i:Identifier> <s:Statement*> <e:ErrorHandler?> <u:UndoHandler?> "ENDTRAP" => {
+    "TRAP" <i:ID> <s:Statement*> <e:ErrorHandler?> <u:UndoHandler?> "ENDTRAP" => {
         TrapDeclaration {
-            name: i,
+            name: i.to_owned(),
             statements: s,
             error_handler: e,
             undo_handler: u
@@ -239,10 +240,10 @@ TrapDeclaration: TrapDeclaration = {
 }
 
 FuncDeclaration: FuncDeclaration = {
-    "FUNC" <dt:Identifier> <i:Identifier> "(" <pl:ParameterDeclarationList?> ")" <s:Statement*> <e:ErrorHandler?> <u:UndoHandler?> "ENDFUNC" => {
+    "FUNC" <dt:ID> <i:ID> "(" <pl:ParameterDeclarationList?> ")" <s:Statement*> <e:ErrorHandler?> <u:UndoHandler?> "ENDFUNC" => {
         FuncDeclaration {
-            data_type: dt,
-            name: i,
+            data_type: dt.to_owned(),
+            name: i.to_owned(),
             parameters: pl.unwrap_or_else(Vec::new), 
             statements: s,
             error_handler: e, 
@@ -270,11 +271,11 @@ ParameterDeclarationItem: ParameterDeclarationType = {
 }
 
 ParameterDeclaration: ParameterDeclaration = {
-    <pam:ParameterDeclarationAccessMode?> <dt:Identifier> <n:Identifier> <d:Dim?> => 
+    <pam:ParameterDeclarationAccessMode?> <dt:ID> <n:ID> <d:Dim?> => 
         ParameterDeclaration {
             access_mode: pam.unwrap_or(AccessMode::IN), 
-            data_type: dt, 
-            name: n,
+            data_type: dt.to_owned(), 
+            name: n.to_owned(),
             dim: d,
         }
 }
@@ -289,7 +290,7 @@ OptionalParameterDeclarationList: Vec<OptionalParameterDeclarationType> = {
 
 OptionalParameterDeclaration: OptionalParameterDeclarationType = {
     <opd:ParameterDeclaration> => OptionalParameterDeclarationType::OptionalParameterDeclaration(opd),
-    "switch" <i:Identifier> => OptionalParameterDeclarationType::Switch(i),
+    "switch" <i:ID> => OptionalParameterDeclarationType::Switch(i.to_owned()),
     "<ALT>" => OptionalParameterDeclarationType::ALT
 }
 
@@ -326,7 +327,7 @@ pub Statement: Statement = {
 }
 
 LabelStatement: Statement = {
-    <i:Identifier> ":" => Statement::Label(i)
+    <i:ID> ":" => Statement::Label(i.to_owned())
 }
 
 AssignmentStatement: Statement = {
@@ -339,19 +340,19 @@ AssignmentTarget: AssignmentTarget = {
 }
 
 Variable: Variable = {
-    <i:Identifier> => Variable::Variable(i),
-    <i:Identifier> <d:Dim> => Variable::VariableElement(i, d),
-    <v:Variable> "." <e:Identifier> => Variable::VariableComponent(Box::new(v), e)
+    <i:ID> => Variable::Variable(i.to_owned()),
+    <i:ID> <d:Dim> => Variable::VariableElement(i.to_owned(), d),
+    <v:Variable> "." <e:ID> => Variable::VariableComponent(Box::new(v), e.to_owned())
 }
 
 Parameter: Parameter = {
-    <i:Identifier> => Parameter::Parameter(i),
-    <i:Identifier> <d:Dim> => Parameter::ParameterElement(i, d),
-    <v:Parameter> "." <e:Identifier> => Parameter::ParameterComponent(Box::new(v), e)
+    <i:ID> => Parameter::Parameter(i.to_owned()),
+    <i:ID> <d:Dim> => Parameter::ParameterElement(i.to_owned(), d),
+    <v:Parameter> "." <e:ID> => Parameter::ParameterComponent(Box::new(v), e.to_owned())
 }
 
 ProcCall: Statement = {
-    <i:Identifier> <args:ArgumentList?> ";" => Statement::ProcCall(Expr::Term(Term::String(i)), args.unwrap_or_else(Vec::new)),
+    <i:ID> <args:ArgumentList?> ";" => Statement::ProcCall(Expr::Term(Term::String(i.to_owned())), args.unwrap_or_else(Vec::new)),
     "%" <e:Expr> "%" <args:ArgumentList?> ";" => Statement::ProcCall(e, args.unwrap_or_else(Vec::new))
 }
 
@@ -377,15 +378,15 @@ RequiredArgument: (Option<String>, Expr) = {
 }
 
 OptionalArgument: (String, Option<Expr>) = {
-    "\\" <i:Identifier> <e:ArgumentOptionalExpression?> => (i, e)
+    "\\" <i:ID> <e:ArgumentOptionalExpression?> => (i.to_owned(), e)
 }
 
 ConditionalArgument: (String, Parameter, Parameter) = {
-    "\\" <i:Identifier> "?" <pl:Parameter> "," <pr:Parameter> => (i, pl, pr)
+    "\\" <i:ID> "?" <pl:Parameter> "," <pr:Parameter> => (i.to_owned(), pl, pr)
 }
 
 ArgumentIdentifier: String = {
-    <i:Identifier> ":=" => i
+    <i:ID> ":=" => i.to_owned()
 }
 
 ArgumentOptionalExpression: Expr = {
@@ -399,7 +400,7 @@ ArgumentListRest: Option<Argument> = {
 }
 
 GotoStatement: Statement = {
-    "GOTO" <i:Identifier> ";" => Statement::Goto(i)
+    "GOTO" <i:ID> ";" => Statement::Goto(i.to_owned())
 }
 
 ReturnStatement: Statement = {
@@ -423,7 +424,7 @@ TryNextStatement: Statement = {
 }
 
 ConnectStatement: Statement = {
-    "CONNECT" <ct:Identifier> "WITH" <t:Identifier> ";" => Statement::Connect(ct, t)
+    "CONNECT" <ct:ID> "WITH" <t:ID> ";" => Statement::Connect(ct.to_owned(), t.to_owned())
 }
 
 IfStatement: Statement = {
@@ -441,7 +442,7 @@ ElseStatement: Vec<Statement> = {
 }
 
 ForStatement: Statement = {
-    "FOR" <i:Identifier> "FROM" <fe:Expr> "TO" <te:Expr> <step:ForStep?> "DO" <stms:Statement*> "ENDFOR" => Statement::For(i, fe, te, step, stms)
+    "FOR" <i:ID> "FROM" <fe:Expr> "TO" <te:Expr> <step:ForStep?> "DO" <stms:Statement*> "ENDFOR" => Statement::For(i.to_owned(), fe, te, step, stms)
 }
 
 ForStep: Expr = {
@@ -458,11 +459,6 @@ TestStatement: Statement = {
 
 TestStatementCases: TestCase = {
     "CASE" <e:Expr> <er:TestStatementCaseRest*> ":" <stms:Statement*> => {
-        let mut expressions = vec![e];
-        expressions.extend(er);
-        TestCase::Case(expressions, stms)
-    },
-    "case" <e:Expr> <er:TestStatementCaseRest*> ":" <stms:Statement*> => {
         let mut expressions = vec![e];
         expressions.extend(er);
         TestCase::Case(expressions, stms)
@@ -496,7 +492,7 @@ ErrorNumbers: Vec<Expr> = {
 
 ErrorNumber: Expr = {
     <n:Num> => Expr::Term(Term::Num(n)),
-    <i:Identifier> => Expr::Term(Term::String(i)),
+    <i:ID> => Expr::Term(Term::String(i.to_owned())),
 }
 
 ErrorNumberRest: Expr = {
@@ -505,4 +501,51 @@ ErrorNumberRest: Expr = {
 
 UndoHandler: Vec<Statement> = {
     "UNDO" <stms:Statement*> => stms
+}
+
+match {
+    r"(?i)sysmodule" => "SYSMODULE",
+    r"(?i)nostepin" => "NOSTEPIN",
+    r"(?i)viewonly" => "VIEWONLY",
+    r"(?i)readonly" => "READONLY",
+    r"(?i)noview" => "NOVIEW",
+    r"(?i)local" => "LOCAL",
+    r"(?i)module" => "MODULE",
+    r"(?i)endmodule" => "ENDMODULE",
+    r"(?i)task" => "TASK",
+    r"(?i)endtask" => "ENDTASK",
+    r"(?i)proc" => "PROC",
+    r"(?i)endproc" => "ENDPROC",
+    r"(?i)func" => "FUNC",
+    r"(?i)endfunc" => "ENDFUNC",
+    r"(?i)trap" => "TRAP",
+    r"(?i)endtrap" => "ENDTRAP",
+    r"(?i)case" => "CASE",
+    r"(?i)default" => "DEFAULT",
+    r"(?i)if" => "IF",
+    r"(?i)then" => "THEN",
+    r"(?i)elseif" => "ELSEIF",
+    r"(?i)else" => "ELSE",
+    r"(?i)for" => "FOR",
+    r"(?i)to" => "TO",
+    r"(?i)true" => "TRUE",
+    r"(?i)false" => "FALSE",
+    r"(?i)while" => "WHILE",
+    r"(?i)do" => "DO",
+    r"(?i)endwhile" => "ENDWHILE",
+    r"(?i)test" => "TEST",
+    r"(?i)endtest" => "ENDTEST",
+    r"(?i)backward" => "BACKWARD",
+    r"(?i)error" => "ERROR",
+    r"(?i)undo" => "UNDO",
+    r"(?i)retry" => "RETRY",
+    r"(?i)trynext" => "TRYNEXT",
+    r"(?i)connect" => "CONNECT",
+    r"(?i)with" => "WITH",
+    r"(?i)exit" => "EXIT",
+    r"(?i)return" => "RETURN",
+    r"(?i)raise" => "RAISE",
+    r"(?i)catch" => "CATCH",
+} else {
+    _
 }

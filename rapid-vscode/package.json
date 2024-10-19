@@ -2,13 +2,21 @@
   "name": "rapid-vscode",
   "displayName": "ABB RAPID Language Support",
   "description": "Language support for ABB RAPID",
-  "version": "0.1.4",
-  "icon": "images/logo_small_white_b.png",
+  "version": "0.1.5",
+  "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.60.0"
   },
   "categories": [
     "Programming Languages"
+  ],
+  "keywords": [
+    "ABB",
+    "RAPID",
+    "language-support",
+    "Robotics",
+    "Linter",
+    "Formatter"
   ],
   "activationEvents": [
     "onLanguage:rapid"
